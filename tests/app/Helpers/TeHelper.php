@@ -8,6 +8,7 @@ use DTApi\Models\Language;
 use DTApi\Models\UserMeta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use DTApi\Repository\UserRepository;
 
 class TeHelper
 {
@@ -59,6 +60,76 @@ class TeHelper
         }
 
         return $time->format('Y-m-d H:i:s');
+
+    }
+
+    
+    public function testCreateOrUpdateMethod()
+    {
+        $userModel = $this->createMock(\DTApi\Models\User::class);
+        $userRepository = new UserRepository($userModel);
+        $request = Request::create('/users', 'POST', ['name' => 'John Doe', 'email' => 'john@example.com', 'role' => 'customer']);
+
+        $result = $userRepository->createOrUpdate(null, $request);
+
+        $this->assertInstanceOf(\DTApi\Models\User::class, $result);
+        // Add more assertions as needed
+    }
+
+    public function testEnableMethod()
+    {
+        $userModel = $this->createMock(\DTApi\Models\User::class);
+        $userRepository = new UserRepository($userModel);
+        $userId = 1;
+
+        $userRepository->enable($userId);
+
+        // Add assertions to check if the user status is set to '1'
+    }
+
+    public function testDisableMethod()
+    {
+        $userModel = $this->createMock(\DTApi\Models\User::class);
+        $userRepository = new UserRepository($userModel);
+        $userId = 1;
+
+        $userRepository->disable($userId);
+
+        // Add assertions to check if the user status is set to '0'
+    }
+
+    public function testLoggerInitialization()
+    {
+        $userModel = $this->createMock(\DTApi\Models\User::class);
+        
+        $userRepository = new UserRepository($userModel);
+        
+        $logger = $userRepository->getLogger();
+        
+        $this->assertInstanceOf(Logger::class, $logger);
+    }
+
+    public function testGetTranslatorsMethod()
+    {
+        $userModel = $this->createMock(\DTApi\Models\User::class);
+        $userRepository = new UserRepository($userModel);
+        
+        $translators = [
+            // Create mock translator objects as per your requirements
+        ];
+        
+        $userModel->expects($this->once())
+            ->method('where')
+            ->with('user_type', 2)
+            ->willReturnSelf();
+        
+        $userModel->expects($this->once())
+            ->method('get')
+            ->willReturn($translators);
+        
+        $result = $userRepository->getTranslators();
+        
+        $this->assertEquals($translators, $result);
 
     }
 

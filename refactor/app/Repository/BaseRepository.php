@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class BaseRepository
 {
-
     /**
      * @var Model
      */
@@ -21,7 +20,9 @@ class BaseRepository
     protected $validationRules = [];
 
     /**
-     * @param Model $model
+     * BaseRepository constructor.
+     *
+     * @param Model|null $model
      */
     public function __construct(Model $model = null)
     {
@@ -29,14 +30,8 @@ class BaseRepository
     }
 
     /**
-     * @return array
-     */
-    public function validatorAttributeNames()
-    {
-        return [];
-    }
-
-    /**
+     * Get the model instance.
+     *
      * @return Model
      */
     public function getModel()
@@ -45,6 +40,8 @@ class BaseRepository
     }
 
     /**
+     * Get all the records.
+     *
      * @return \Illuminate\Database\Eloquent\Collection|Model[]
      */
     public function all()
@@ -53,7 +50,9 @@ class BaseRepository
     }
 
     /**
-     * @param integer $id
+     * Find a record by ID.
+     *
+     * @param int $id
      * @return Model|null
      */
     public function find($id)
@@ -61,13 +60,21 @@ class BaseRepository
         return $this->model->find($id);
     }
 
-    public function with($array)
+    /**
+     * Eager load relationships.
+     *
+     * @param mixed $relations
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function with($relations)
     {
-        return $this->model->with($array);
+        return $this->model->with($relations);
     }
 
     /**
-     * @param integer $id
+     * Find a record by ID or throw an exception.
+     *
+     * @param int $id
      * @return Model
      * @throws ModelNotFoundException
      */
@@ -77,18 +84,20 @@ class BaseRepository
     }
 
     /**
+     * Find a record by slug.
+     *
      * @param string $slug
      * @return Model
      * @throws ModelNotFoundException
      */
     public function findBySlug($slug)
     {
-
-        return $this->model->where('slug', $slug)->first();
-
+        return $this->model->where('slug', $slug)->firstOrFail();
     }
 
     /**
+     * Get a new query builder instance.
+     *
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function query()
@@ -97,60 +106,77 @@ class BaseRepository
     }
 
     /**
+     * Create a new instance of the model.
+     *
      * @param array $attributes
      * @return Model
      */
     public function instance(array $attributes = [])
     {
-        $model = $this->model;
-        return new $model($attributes);
+        return new $this->model($attributes);
     }
 
     /**
+     * Paginate the query results.
+     *
      * @param int|null $perPage
-     * @return mixed
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function paginate($perPage = null)
     {
         return $this->model->paginate($perPage);
     }
 
-    public function where($key, $where)
+    /**
+     * Filter the query results by a column's value.
+     *
+     * @param string $key
+     * @param mixed $value
+     * @return $this
+     */
+    public function where($key, $value)
     {
-        return $this->model->where($key, $where);
+        return $this->model->where($key, $value);
     }
 
     /**
+     * Get the validator instance for the given data.
+     *
      * @param array $data
-     * @param null $rules
+     * @param array|null $rules
      * @param array $messages
      * @param array $customAttributes
      * @return \Illuminate\Validation\Validator
      */
-    public function validator(array $data = [], $rules = null, array $messages = [], array $customAttributes = [])
+    public function validator(array $data = [], array $rules = null, array $messages = [], array $customAttributes = [])
     {
-        if (is_null($rules)) {
-            $rules = $this->validationRules;
-        }
+        $rules = $rules ?? $this->validationRules;
 
         return Validator::make($data, $rules, $messages, $customAttributes);
     }
 
     /**
+     * Validate the given data with the specified rules.
+     *
      * @param array $data
-     * @param null $rules
+     * @param array|null $rules
      * @param array $messages
      * @param array $customAttributes
-     * @return bool
+     * @return void
      * @throws ValidationException
      */
-    public function validate(array $data = [], $rules = null, array $messages = [], array $customAttributes = [])
+    public function validate(array $data = [], array $rules = null, array $messages = [], array $customAttributes = [])
     {
         $validator = $this->validator($data, $rules, $messages, $customAttributes);
-        return $this->_validate($validator);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
     }
 
     /**
+     * Create a new record.
+     *
      * @param array $data
      * @return Model
      */
@@ -160,46 +186,32 @@ class BaseRepository
     }
 
     /**
-     * @param integer $id
+     * Update the specified record.
+     *
+     * @param int $id
      * @param array $data
      * @return Model
+     * @throws ModelNotFoundException
      */
     public function update($id, array $data = [])
     {
-        $instance = $this->findOrFail($id);
-        $instance->update($data);
-        return $instance;
+        $model = $this->findOrFail($id);
+        $model->update($data);
+        return $model;
     }
 
     /**
-     * @param integer $id
+     * Delete the specified record.
+     *
+     * @param int $id
      * @return Model
-     * @throws \Exception
+     * @throws \Exception|ModelNotFoundException
      */
     public function delete($id)
     {
         $model = $this->findOrFail($id);
         $model->delete();
         return $model;
-    }
-
-    /**
-     * @param \Illuminate\Validation\Validator $validator
-     * @return bool
-     * @throws ValidationException
-     */
-    protected function _validate(\Illuminate\Validation\Validator $validator)
-    {
-        if (!empty($attributeNames = $this->validatorAttributeNames())) {
-            $validator->setAttributeNames($attributeNames);
-        }
-
-        if ($validator->fails()) {
-            return false;
-            throw (new ValidationException)->setValidator($validator);
-        }
-
-        return true;
     }
 
 }
